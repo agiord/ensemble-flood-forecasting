@@ -1,6 +1,5 @@
 # ensemble-flood-forecasting
-Master's thesis
-<<<<<<< HEAD
+Master's thesis <<<< HEAD
 
 This repository contains the work I am currently carrying out for my ongoing master thesis in Atmospheric Sciences at the University of Innsbruck (ACINN), in collaboration with the Swiss Federal Research Institute WSL in Zurich, under the supervision of Prof. Dr. Mathias Rotach (ACINN) and Dr. Massimiliano Zappa (WSL).
 
