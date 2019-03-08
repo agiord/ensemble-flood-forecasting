@@ -19,7 +19,7 @@ df = af.dictionary()
 list(df.keys())
 
 # Decide simulation starting time:
-sim_start = '2018-10-28 12:00:00'
+sim_start = '2018-10-26 12:00:00'
 
 # Some parameters for the basin:
 Verzasca_area = 186*1000.0**2 #m2
@@ -122,7 +122,9 @@ ______________________________
 af.spaghetti_plot(rm_medians, ens_df_prec, obs_subset, prec_obs_subset, sim_start, medians=True)
 
 # Quantify the meteorological uncertainty by plotting the range of spread among all the 21 rm medians obtained:
-af.hydrograph(quant_rm_medians, quant_prec, obs_subset, prec_obs_subset, sim_start, medians=True)
+#af.hydrograph(quant_rm_medians, quant_prec, obs_subset, prec_obs_subset, sim_start, medians=True)
+af.comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start)
+
 
 """
 _____________________________________________
@@ -134,8 +136,7 @@ _____________________________________________
 rm = 10
 af.spaghetti_plot(rm_groups_runoff[rm], ens_df_prec, obs_subset, prec_obs_subset, sim_start,
                runoff_label='\n'.join((r'rm = %02d' % rm,  r'All pin realizations')))
-af.hydrograph(quant_rm_groups_runoff[rm], quant_prec, obs_subset, prec_obs_subset, sim_start,
-          runoff_label='\n'.join((r'rm = %02d' % rm,  r'All pin realizations')))
+af.hydrograph(quant_rm_groups_runoff[rm], quant_prec, obs_subset, prec_obs_subset, sim_start)
 
 # Look at different rm realizations how the hydrological spread behaves: detect three realizations having different behaviours
 """ For sim_start = '2018-10-27 00:00:00'
@@ -242,15 +243,17 @@ import cluster_funct as cl
 cl.clustered_dendrogram(ens_df_prec.drop('date', axis=1), sim_start)
 #plt.savefig('/home/ciccuz/Thesis/cluster/dendrogram.pdf', bbox_inches='tight', dpi=1000)
 
+#choose how many clusters you want (3 or 5):
+Nclusters = 5
 
 #representative members
-RM = cl.clustered_RM(ens_df_prec.drop('date', axis=1), sim_start)
+RM = cl.clustered_RM(ens_df_prec.drop('date', axis=1), sim_start, Nclusters = Nclusters)
 
 #extract the sub-dataframe for prec and runoff forecasts containing only the members related to the new extracted representative members:
 clust_ens_df_prec = pd.DataFrame()
 clust_ens_df_runoff = pd.DataFrame()
 
-for rm_index in range(5):
+for rm_index in range(Nclusters):
     clust_ens_df_prec = pd.concat([clust_ens_df_prec, ens_df_prec.loc[:, ens_df_prec.columns == f'rm{RM[rm_index]:02d}_pin01']], axis=1, sort=False)
     for pin in range(1,26):
         clust_ens_df_runoff = pd.concat([clust_ens_df_runoff, ens_df_runoff.loc[:, ens_df_runoff.columns == f'rm{RM[rm_index]:02d}_pin{pin:02d}']], axis=1, sort=False)
@@ -272,8 +275,8 @@ ________________________________________________________________________________
 af.spaghetti_plot(clust_ens_df_runoff, clust_ens_df_prec, obs_subset, prec_obs_subset, sim_start, clustered=True)
 
 # Hydrograph plot of clustered forecasts
-cl.cluster_hydrograph(clust_quant_runoff, clust_quant_prec, quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start)
-plt.savefig('/home/ciccuz/Thesis/cluster/cluster_hydrograph2.pdf', bbox_inches='tight')
+cl.cluster_hydrograph(clust_quant_runoff, clust_quant_prec, quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start, Nclusters=Nclusters)
+#plt.savefig(f'/home/ciccuz/Thesis/cluster/cluster_hydrograph_{Nclusters}RM.pdf', bbox_inches='tight')
 
 
 """
@@ -310,7 +313,8 @@ clust_quant_rm_medians = af.quantiles(clust_rm_medians)
 af.spaghetti_plot(clust_rm_medians, clust_ens_df_prec, obs_subset, prec_obs_subset, sim_start, clustered=True, medians=True)
 
 # Quantify the meteorological uncertainty by plotting the range of spread among all rm medians obtained:
-cl.cluster_hydrograph(clust_quant_rm_medians, clust_quant_prec, quant_rm_medians, quant_prec, obs_subset, prec_obs_subset, sim_start, medians=True)
+cl.cluster_hydrograph(clust_quant_rm_medians, clust_quant_prec, quant_rm_medians, quant_prec, obs_subset, prec_obs_subset, sim_start, Nclusters=Nclusters,
+                      medians=True)
 
 
 """

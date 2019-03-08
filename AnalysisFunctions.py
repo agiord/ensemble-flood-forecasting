@@ -550,13 +550,14 @@ def hydrograph(quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start,
         prec_spread = mpatches.Patch(color='#023FA5',alpha=0.5, label='Prec spread')
                                    
         
-        legend = fig.legend(title='Precipitation                    Runoff', handles=[l1[0], prec_IQR, prec_spread, l2[0], l3[0], 
-                                                                                      runoff_IQR, runoff_spread, l4[0]], 
+        legend = fig.legend(title='Precipitation                    Runoff', handles=[l2[0], l1[0], prec_IQR, prec_spread, 
+                                                                                      l4[0], l3[0], runoff_IQR, runoff_spread], 
         ncol=2, framealpha=0.5, loc=(0.645,0.526), 
-        labels=['       Median $q_{50\%}$', 
+        labels=['       Observation',
+                '       Median $q_{50\%}$', 
                 '              IQR', 
                 '       Total spread',  
-                '       Observation', '', '', '', '']);
+                '', '', '', '']);
                                      
     if past == True:
         fig.legend(handles=[l2[0], l3[0], runoff_IQR, runoff_spread, l4[0]], ncol=1, framealpha=0.5,
@@ -566,6 +567,131 @@ def hydrograph(quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start,
     plt.rcParams.update({'font.size': 12})
     
     return plt.show()
+
+
+
+def comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start):
+    
+    """
+    Like hydrograph function but showing also the portion of spread not covered by the median meteo forecasts
+    """
+    
+    #datetime conversion to use plt.fill_between otherwise it would not work with quantiles.date on x axis
+    date_conv = [''  for x in range(120)]
+    i=0
+    for date in quant_rm_medians.date:
+        date_conv[i] = parser.parse(str(date))
+        i = i+1
+     
+    fig, (ax1, ax2) = plt.subplots(2, 2, figsize=(13,8), dpi=100)
+       
+    ax1 = plt.subplot2grid((6,1), (0,0), rowspan=2, colspan=1)
+    plt.title('Meteorological ens medians, \n Discharge hydrograph and forecast precipitation for initialization ' + sim_start)
+    
+    plt.ylabel('Precipitation [mm h$^{-1}$]')
+    ax2 = plt.subplot2grid((6,1), (2,0), rowspan=4, colspan=1, sharex=ax1)
+    plt.ylabel('Discharge [m$^3$ s$^{-1}$]')
+    
+    ax1.fill_between(date_conv, quant_prec ['0.75'], quant_prec ['0.25'], facecolor='#023FA5', alpha='0.3')
+    ax1.fill_between(date_conv, quant_prec ['1.0'], quant_prec ['0.75'], facecolor='#023FA5', alpha='0.5')
+    ax1.fill_between(date_conv, quant_prec ['0.25'], quant_prec ['0.0'], facecolor='#023FA5', alpha='0.5')
+    l1 = ax1.plot(date_conv, quant_prec ['0.5'], linewidth=2, label='Prec $q_{50\%}$', color='#023FA5', alpha=1)
+                  
+    #label text box
+    prec_label='All ens members'
+    ax1.text(0.015, 0.135, prec_label, transform=ax1.transAxes, fontsize=13, 
+             verticalalignment='top', bbox=dict(boxstyle='round', facecolor='#023FA5', alpha=0.3))
+    
+    l2 = ax1.plot(prec_obs_subset.date, prec_obs_subset['P-kor'], linewidth=2, label='Prec obs', color='red')
+    
+    ax1.invert_yaxis()
+    ax1.grid(True)
+    ax1.yaxis.tick_right()
+    ax1.yaxis.set_label_position("right")
+    ax1.spines["bottom"].set_visible(False)
+       
+    
+    ax2.fill_between(date_conv, quant_rm_medians ['0.75'], quant_rm_medians ['0.25'], facecolor='#32AAB5', alpha='0.3')
+    ax2.fill_between(date_conv, quant_rm_medians ['1.0'], quant_rm_medians ['0.75'], facecolor='#32AAB5', alpha='0.5')
+    ax2.fill_between(date_conv, quant_rm_medians ['0.25'], quant_rm_medians ['0.0'], facecolor='#32AAB5', alpha='0.5')
+    l3 = ax2.plot(date_conv, quant_rm_medians ['0.5'], linewidth=2, label='Runoff $q_{50\%}$', color='#32AAB5', alpha=1)
+    l4 = ax2.plot(obs_subset.date, obs_subset.runoff, linewidth=2, label='Runoff obs', color='orange')
+    
+    #fill between cluster quantile 1.0 and non-cluster quantile 1.0
+    ax2.fill_between(date_conv, quant_rm_medians ['1.0'], quant_runoff ['1.0'], facecolor='#3f3f3f', alpha='0.2', hatch='///', edgecolor='#32AAB5',linewidth=0.0)
+    ax2.fill_between(date_conv, quant_rm_medians ['0.0'], quant_runoff ['0.0'], facecolor='#3f3f3f', alpha='0.2', hatch='///', edgecolor='#32AAB5',linewidth=0.0) ##9E289E
+    
+    ax2.grid(True)
+    ax2.spines["top"].set_visible(False)
+    
+    plt.setp(ax1.get_xticklabels(), visible=False)
+    plt.subplots_adjust(hspace=0.0)
+    
+    #label text box
+    runoff_label='Ens medians'
+    ax2.text(0.015, 0.965, runoff_label, transform=ax2.transAxes, fontsize=13,
+            verticalalignment='top', bbox=dict(boxstyle='round', facecolor='#32AAB5', alpha=0.3))
+    
+    #y axis limits
+    #ax2.set_ylim([0,500])
+    
+    #x axis ticks and limits
+    days = mdates.DayLocator()
+    hours = mdates.HourLocator()
+    yearsFmt = mdates.DateFormatter('%Y-%m-%d') # %H:%M')
+    
+    ax2.xaxis.set_major_locator(days)
+    ax2.xaxis.set_major_formatter(yearsFmt)
+    ax2.xaxis.set_minor_locator(hours)
+    # min and max on x axis
+    datemin = np.datetime64(quant_rm_medians.date[0], 'm') - np.timedelta64(60, 'm')
+    datemax = np.datetime64(quant_rm_medians.date[119], 'm') + np.timedelta64(25, 'm')
+    ax2.set_xlim(datemin, datemax)
+    
+    runoff_IQR = mpatches.Patch(color='#32AAB5',alpha=0.3, label='Runoff IQR')
+    runoff_spread = mpatches.Patch(color='#32AAB5',alpha=0.5, label='Runoff spread')
+    uncovered_runoff_spread = mpatches.Patch(facecolor='#3f3f3f',alpha=0.2, hatch='///', edgecolor='#32AAB5', label='Runoff spread uncovered by meteo medians')
+                                   
+    prec_IQR = mpatches.Patch(color='#023FA5',alpha=0.3, label='Prec IQR')
+    prec_spread = mpatches.Patch(color='#023FA5',alpha=0.5, label='Prec spread')
+    
+    empty = ax1.plot(prec_obs_subset.date, prec_obs_subset['P-kor'], linewidth=0)
+                                         
+    legend = fig.legend(title='$\\bf Precipitation $                     $\\bf Runoff$', handles=[l2[0], l1[0], prec_IQR, prec_spread, empty[0], 
+                                                                                                    l4[0], l3[0], runoff_IQR, runoff_spread, uncovered_runoff_spread], 
+        ncol=2, framealpha=0.5, loc=(0.644,0.526), 
+        labels=['         Observation',
+                '         Median $q_{50\%}$', 
+                '                IQR', 
+                '         Total spread',
+                '   Spread not covered \n    by meteo medians', '',
+                 '', '', '', '', '\n', '']);
+    
+    plt.rcParams.update({'font.size': 12})
+    #ax2.set_ylim(0,5)
+    #look at the percentage of spread covered by ens medians forecasts: calculate the spread ranges, do their ratio, divide by 120 (the amount of
+    #leadtime hours) and sum over all the hours. If present, remove NaNs values and divide not by 120 but by the length of non-NaNs values
+    
+    #set a threshold on the obs to avoid low flow conditions: obs > 10 m3s-1
+   
+    rm_medians_spread_runoff = quant_rm_medians['1.0'] - quant_rm_medians['0.0']
+    rm_medians_spread_runoff = rm_medians_spread_runoff.loc[obs_subset.runoff.reset_index(drop=True) > 10].reset_index(drop=True)
+    
+    total_spread_runoff = quant_runoff ['1.0'] - quant_runoff['0.0']
+    total_spread_runoff = total_spread_runoff.loc[obs_subset.runoff.reset_index(drop=True) > 10].reset_index(drop=True)
+    
+    raw_spread_ratio_runoff = rm_medians_spread_runoff/total_spread_runoff
+    nonNaNs_runoff = np.where(np.isnan(raw_spread_ratio_runoff)== False)[0]
+    spread_ratio_runoff = raw_spread_ratio_runoff[nonNaNs_runoff]/len(nonNaNs_runoff)
+    perc_spread_runoff = sum(spread_ratio_runoff)
+    uncov_prec_spread = 1.0 - perc_spread_runoff
+
+    fig.text(0.93,0.865,f'{uncov_prec_spread*100:.1f}%',  transform=ax2.transAxes, fontsize=13,
+            verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0), zorder=10)
+        
+    return plt.show()
+
+
 
 
 def hydrograph_rms(rm_high, rm_medium, rm_low, ens_df_prec, quant_rm_groups_runoff, quant_runoff, obs_subset, 
