@@ -221,7 +221,7 @@ PEAK-BOX APPROACH
 
 import peakbox_classic_multipeaksV2 as pb
 
-pb.peak_box_multipeaks(rm_medians, obs_subset, sim_start, delta_t=10, gamma=0.6, decreashours=10, beta = 0.6)
+pb.peak_box_multipeaks(rm_medians, obs_subset, sim_start,  delta_t=10, gamma=0.6, decreashours=10, beta = 0.3)
 #plt.savefig('/home/ciccuz/Thesis/PeakBox/AAAAAAAAAA2.pdf', bbox_inches='tight', dpi=1000)
 
 

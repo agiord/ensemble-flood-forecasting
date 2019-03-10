@@ -668,7 +668,7 @@ def comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_
                  '', '', '', '', '\n', '']);
     
     plt.rcParams.update({'font.size': 12})
-    #ax2.set_ylim(0,5)
+    
     #look at the percentage of spread covered by ens medians forecasts: calculate the spread ranges, do their ratio, divide by 120 (the amount of
     #leadtime hours) and sum over all the hours. If present, remove NaNs values and divide not by 120 but by the length of non-NaNs values
     
