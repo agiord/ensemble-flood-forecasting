@@ -950,7 +950,7 @@ def hydro_unc_boxplot(quant_rm_groups_runoff, sim_start, normalized=False):
     
     # Merge all dataframes together
     hydro_unc_tot = pd.concat((hydro_unc[rm] for rm in range(21)), ignore_index=True)
-    
+    """
     sns.set(style="ticks", palette="pastel")
     
     fig, ax = plt.subplots(1, 1, figsize=(10,7), dpi=100)
@@ -978,6 +978,69 @@ def hydro_unc_boxplot(quant_rm_groups_runoff, sim_start, normalized=False):
     plt.xlabel(xlabel)
     plt.legend(title='Hydro param spread dispersion', loc='lower right')
     plt.grid()
+    """
+    #count how many times the spread interval is in every different discharge range:
+    n_samples = pd.DataFrame(index=range(1))
+    
+    for column in hydro_unc_tot.columns[~hydro_unc_tot.columns.isin(['unc_interval'])]:
+        n_samples[column] = hydro_unc_tot[column].count()/len(hydro_unc_tot[column])
+    
+    n_samples_sns = pd.DataFrame(columns=['spread_int', 'freq'])
+    n_samples_sns['spread_int'] = n_samples.columns
+    n_samples_sns['freq'] = n_samples.loc[n_samples.index == 0].iloc[0].values
+    
+    
+    melted_hydro_unc = pd.melt(hydro_unc_tot, id_vars=['unc_interval'])
+    melted_hydro_unc.value = melted_hydro_unc.value.astype(float)
+    
+    if normalized == True :  
+        xlabel = 'Normalized spread interval range'
+    else : 
+        xlabel = 'Spread interval range [m3 s$^{-1}$]'
+    
+    #PLOT
+    sns.set(style="ticks", palette="pastel")
+    
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13,8), dpi=100)
+    fig.suptitle('Hydrological uncertainty spread distribution for initialization ' + sim_start, y=0.95)
+    
+    ax1 = plt.subplot2grid((1,6), (0,0), rowspan=1, colspan=4)
+    
+    sns.boxplot(data=melted_hydro_unc,x="value", y='variable', hue='unc_interval', 
+                palette=["#E4CBF9", "#9AE1E1"])
+    ax1.invert_yaxis()
+    sns.despine(offset=10, trim=True)
+    
+    ax1.grid(True)
+    ax1.set_ylabel('Discharge interval [m$^3$ s$^{-1}$]')
+    ax1.set_xlabel(xlabel)
+    ax1.get_legend().remove()
+    
+    
+    
+    ax2 = plt.subplot2grid((1,6), (0,4), rowspan=1, colspan=2, sharey=ax1)
+    
+    ax2.set_xlabel('Frequency')
+    sns.barplot(x='freq', y='spread_int', data=n_samples_sns, color='#7DD3FF',  linewidth=1.5, edgecolor=".2")
+    
+                
+    ax2.invert_yaxis()       
+    sns.despine(offset=10, trim=False)
+    
+    ax2.yaxis.tick_right()
+    ax2.invert_xaxis()
+    ax2.yaxis.set_label_position("right")
+    ax2.set_ylabel('')
+    ax2.grid(True)
+    ax2.set_xlabel('Spread interval frequency')
+    ax2.set_xlim(round(max(n_samples_sns['freq']),1), 0)
+    ax2.set_xticks(np.arange(0, round(max(n_samples_sns['freq'])+0.09,1)+0.01, 0.1))
+    
+    ax2.spines["left"].set_visible(False)
+    
+    fig.legend(title='Hydro param spread dispersion', loc=(0.409,0.801))
+    fig.subplots_adjust(wspace=0.0)
+    
     return plt.show()
 
 

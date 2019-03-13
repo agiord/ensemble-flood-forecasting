@@ -157,6 +157,8 @@ af.hydrograph_rms(rm_high, rm_medium, rm_low, ens_df_prec, quant_rm_groups_runof
 
 # Quantify the hydrological uncertainty considering the quantiles around every rm median:
 af.hydro_unc_boxplot(quant_rm_groups_runoff, sim_start, normalized = True)
+#plt.savefig('/home/ciccuz/Thesis/hydro_unc_boxplot2.pdf', bbox_inches='tight', dpi=1000)
+
 
 """
 ________________________________________________________________________________________________________
@@ -221,9 +223,14 @@ PEAK-BOX APPROACH
 
 import peakbox_classic_multipeaksV2 as pb
 
-pb.peak_box_multipeaks(rm_medians, obs_subset, sim_start,  delta_t=10, gamma=0.6, decreashours=10, beta = 0.3)
+pb.peak_box_multipeaks(rm_medians, obs_subset, sim_start,  delta_t=10, gamma=0.6, decreashours=10, beta = 0.8)
 #plt.savefig('/home/ciccuz/Thesis/PeakBox/AAAAAAAAAA2.pdf', bbox_inches='tight', dpi=1000)
 
+
+import peakbox_classic_multipeaksV3_cluster as pbk
+
+pbk.peak_box_multipeaks_kmeans(rm_medians, obs_subset, sim_start,  delta_t=10, gamma=0.6)
+plt.savefig('/home/ciccuz/Thesis/PeakBox/AAAAAAAAAA2.pdf', bbox_inches='tight', dpi=1000)
 
 """
 -------------------------------------------------------------------------------------------------------------------------------------------------
@@ -240,6 +247,8 @@ _______________________________
 import cluster_funct as cl
 
 #plot the dendrogram
+pgf_with_latex = {"pgf.texsystem": "xelatex",
+        "text.usetex": False}  
 cl.clustered_dendrogram(ens_df_prec.drop('date', axis=1), sim_start)
 #plt.savefig('/home/ciccuz/Thesis/cluster/dendrogram.pdf', bbox_inches='tight', dpi=1000)
 
