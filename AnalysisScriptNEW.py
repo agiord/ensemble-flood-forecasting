@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import statsmodels.api as sm
 import numpy as np
 
+import dill
+
 """
 -------------------------------------------------------------------------------------------------------------------------------------------------
 PRE-PROCESSING: Import data, organize them, set observations subsets, calculate the quantiles:
@@ -31,11 +33,21 @@ obs_columns = ['year','month','day','hour','runoff']
 obs_df = pd.DataFrame(pd.read_csv(obs_pattern, names=obs_columns, delim_whitespace=True, header=None))
 obs_df['date'] = pd.to_datetime(obs_df[['year', 'month', 'day', 'hour']])
 
-# Precipitation observation: open precipitation observation dataframe obtained by cosmo1+pluviometer 
+#Precipitation observation: open precipitation observation dataframe obtained by cosmoE forecast in the past 
 #data concatenated series before the initialization of the model
-prec_obs_df = af.dictionary(pattern="/home/ciccuz/hydro/PrecObs/cosmo1_{simul_time}/{otherstuff}",
+"""
+prec_obs_12nov_28nov = df['2018-11-29 00:00:00']['rm00_pin01'][['P-kor', 'date']].iloc[0:419]
+prec_obs_26ott_12nov = df['2018-11-12 12:00:00']['rm00_pin01'][['P-kor', 'date']].iloc[0:420]
+prec_obs_9ott_26ott = df['2018-10-26 12:00:00']['rm00_pin01'][['P-kor', 'date']].iloc[0:420]
+
+prec_obs_series = pd.concat([prec_obs_9ott_26ott, prec_obs_26ott_12nov, prec_obs_12nov_28nov]).reset_index(drop=True) 
+dill.dump(prec_obs_series, open( "prec_obs/prec_obs_series.txt", "wb") )
+
+prec_obs_df_OLD = af.dictionary(pattern="/home/ciccuz/hydro/PrecObs/cosmo1_{simul_time}/{otherstuff}",
                         folders_pattern = '/home/ciccuz/hydro/PrecObs/cosmo1_*')
-prec_obs_series = prec_obs_df['2018-11-09 12:00:00']['Ver500.'][['P-kor','date']].loc[prec_obs_df['2018-11-09 12:00:00']['Ver500.'].date < '2018-11-09 13:00:00']
+prec_obs_series_OLD = prec_obs_df['2018-11-09 12:00:00']['Ver500.'][['P-kor','date']].loc[prec_obs_df['2018-11-09 12:00:00']['Ver500.'].date < '2018-11-09 13:00:00']
+"""
+prec_obs_series= dill.load( open( "prec_obs/prec_obs_series.txt", "rb" ) )
 
 # Extract from the dictionary the dataframe containing all the different realizations of the same event: 
 #every ensemble member and parameter set combination for the runoff, every ensemble member for the precipitation.
@@ -62,6 +74,12 @@ obsss = obs_df.loc[obs_df.year == 2018].loc[obs_df.month >= 10]
 plt.plot(obsss.date, obsss.runoff)
 plt.ylim(20,200)
 plt.show()
+
+# Observed precipitation plot for 10-11 2018:
+fig, ax = plt.subplots(1, 1, figsize=(10,6), dpi=100)
+plt.plot(prec_obs_series.date, prec_obs_series['P-kor'])
+plt.show()
+
 
 
 """
@@ -123,7 +141,40 @@ af.spaghetti_plot(rm_medians, ens_df_prec, obs_subset, prec_obs_subset, sim_star
 
 # Quantify the meteorological uncertainty by plotting the range of spread among all the 21 rm medians obtained:
 #af.hydrograph(quant_rm_medians, quant_prec, obs_subset, prec_obs_subset, sim_start, medians=True)
-af.comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start)
+import AnalysisFunctions as af
+af.comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start)[1]
+plt.savefig('/home/ciccuz/Thesis/AAAAAAAAAAAAAAAAAAAA.pdf', bbox_inches='tight')
+
+"""
+______________________________
+- Thinning of the spread: remove spread extremes to try to obtain a sharper forecast, more compact around the observation
+______________________________
+"""
+
+#for every leadtime find maximum and minimum value and its realization of fcst runoff:
+max_runoff = pd.DataFrame(index=range(120), columns=['runoff', 'member'])
+min_runoff = pd.DataFrame(index=range(120), columns=['runoff', 'member'])
+
+for leadtime in range(120):
+    max_runoff['runoff'][leadtime] = ens_df_runoff.loc[:, ens_df_runoff.columns != 'date'].loc[[leadtime]].max(axis=1).values[0]
+    max_runoff['member'][leadtime] = (list(ens_df_runoff.loc[:, ens_df_runoff.columns != 'date'].loc[[leadtime]].stack().idxmax()))[1]
+    
+    min_runoff['runoff'][leadtime] = ens_df_runoff.loc[:, ens_df_runoff.columns != 'date'].loc[[leadtime]].min(axis=1).values[0]
+    min_runoff['member'][leadtime] = (list(ens_df_runoff.loc[:, ens_df_runoff.columns != 'date'].loc[[leadtime]].stack().idxmin()))[1]
+    
+    
+#remove from dataframe the meteo member related to the maximum/minimum runoff: replace those member with NaNs
+ens_df_runoff_thin = ens_df_runoff.copy()
+for leadtime in range(120):
+    ens_df_runoff_thin.replace(ens_df_runoff_thin.loc[[leadtime]].filter(regex=max_runoff.loc[[leadtime]]['member'].values[0][:4]), 
+                               np.nan, inplace=True)
+    ens_df_runoff_thin.replace(ens_df_runoff_thin.loc[[leadtime]].filter(regex=min_runoff.loc[[leadtime]]['member'].values[0][:4]), 
+                               np.nan, inplace=True)
+    
+#calculate quantiles on this new set of data:
+quant_runoff_thin = af.quantiles(ens_df_runoff_thin)
+
+af.comparison_meteo_hydrograph(quant_runoff_thin, quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start, thinning=True)[1]
 
 
 """
@@ -252,8 +303,8 @@ pgf_with_latex = {"pgf.texsystem": "xelatex",
 cl.clustered_dendrogram(ens_df_prec.drop('date', axis=1), sim_start)
 #plt.savefig('/home/ciccuz/Thesis/cluster/dendrogram.pdf', bbox_inches='tight', dpi=1000)
 
-#choose how many clusters you want (3 or 5):
-Nclusters = 5
+#choose how many clusters you want (3, 5 or 7):
+Nclusters = 3
 
 #representative members
 RM = cl.clustered_RM(ens_df_prec.drop('date', axis=1), sim_start, Nclusters = Nclusters)
@@ -284,9 +335,8 @@ ________________________________________________________________________________
 af.spaghetti_plot(clust_ens_df_runoff, clust_ens_df_prec, obs_subset, prec_obs_subset, sim_start, clustered=True)
 
 # Hydrograph plot of clustered forecasts
-cl.cluster_hydrograph(clust_quant_runoff, clust_quant_prec, quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start, Nclusters=Nclusters)
-#plt.savefig(f'/home/ciccuz/Thesis/cluster/cluster_hydrograph_{Nclusters}RM.pdf', bbox_inches='tight')
-
+cl.cluster_hydrograph(clust_quant_runoff, clust_quant_prec, quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start, Nclusters=Nclusters)[2]
+plt.savefig(f'/home/ciccuz/Thesis/cluster/cluster_hydrograph_{Nclusters}RMASDASDASD.pdf', bbox_inches='tight')
 
 """
 _________________________________
@@ -332,7 +382,7 @@ _________________________________________
 _________________________________________
 """
 
-pb.peak_box_multipeaks(clust_rm_medians, obs_subset, sim_start, delta_t=10, gamma=0.6, decreashours=10, beta = 0.6)
+pbk.peak_box_multipeaks_kmeans(clust_rm_medians, obs_subset, sim_start, delta_t=10, gamma=0.6)
 
 
 

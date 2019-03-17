@@ -334,14 +334,16 @@ def quantiles(ens_df):
     quantiles = pd.DataFrame()
     columns = ['0.0', '0.1', '0.2', '0.25', '0.3', '0.4', '0.5', '0.6', '0.7', '0.75', '0.8', '0.9', '0.95',
                '0.975', '0.99', '1.0']
-    j=0
-
+    
+    quantiles = ens_df.quantile([.0,.1,.2,.25,.3,.4,.5,.6,.7,.75,.8,.9,.95,.975,.99,1.0], axis=1)
+    
+    #j=0
     #calculate quantiles for every date considering every different simulation run
-    for i in ens_df['date']:
-        quantiles[j] = mquantiles(ens_df.loc[ens_df['date'] == i].drop('date', axis=1), 
-                                  prob=[0.0, 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 0.95,
-                                        0.975, 0.99, 1.0])
-        j = j+1
+    #for i in ens_df['date']:
+    #    quantiles[j] = mquantiles(ens_df.loc[ens_df['date'] == i].drop('date', axis=1), 
+    #                              prob=[0.0, 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 0.95,
+    #                                    0.975, 0.99, 1.0])
+    #    j = j+1
 
     #transpose the dataframe
     quantiles = quantiles.T
@@ -570,7 +572,7 @@ def hydrograph(quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start,
 
 
 
-def comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start):
+def comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start, thinning=False):
     
     """
     Like hydrograph function but showing also the portion of spread not covered by the median meteo forecasts
@@ -586,8 +588,15 @@ def comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_
     fig, (ax1, ax2) = plt.subplots(2, 2, figsize=(13,8), dpi=100)
        
     ax1 = plt.subplot2grid((6,1), (0,0), rowspan=2, colspan=1)
-    plt.title('Meteorological ens medians, \n Discharge hydrograph and forecast precipitation for initialization ' + sim_start)
-    
+    if thinning == False:
+        uncover_facecol = '#FDE333'
+        alpha = 0.35
+        plt.title('Meteorological ens medians, \n Discharge hydrograph and forecast precipitation for initialization ' + sim_start)
+    else:
+        uncover_facecol = '#D1FBD4'
+        alpha=0.7
+        plt.title('Thinned forecast: removal of extreme meteorological members, \n Discharge hydrograph and forecast precipitation for initialization ' + sim_start)
+        
     plt.ylabel('Precipitation [mm h$^{-1}$]')
     ax2 = plt.subplot2grid((6,1), (2,0), rowspan=4, colspan=1, sharex=ax1)
     plt.ylabel('Discharge [m$^3$ s$^{-1}$]')
@@ -618,8 +627,8 @@ def comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_
     l4 = ax2.plot(obs_subset.date, obs_subset.runoff, linewidth=2, label='Runoff obs', color='orange')
     
     #fill between cluster quantile 1.0 and non-cluster quantile 1.0
-    ax2.fill_between(date_conv, quant_rm_medians ['1.0'], quant_runoff ['1.0'], facecolor='#3f3f3f', alpha='0.2', hatch='///', edgecolor='#32AAB5',linewidth=0.0)
-    ax2.fill_between(date_conv, quant_rm_medians ['0.0'], quant_runoff ['0.0'], facecolor='#3f3f3f', alpha='0.2', hatch='///', edgecolor='#32AAB5',linewidth=0.0) ##9E289E
+    ax2.fill_between(date_conv, quant_rm_medians ['1.0'], quant_runoff ['1.0'], facecolor=uncover_facecol, alpha=alpha, hatch='///', edgecolor='#32AAB5',linewidth=0.0)
+    ax2.fill_between(date_conv, quant_rm_medians ['0.0'], quant_runoff ['0.0'], facecolor=uncover_facecol, alpha=alpha, hatch='///', edgecolor='#32AAB5',linewidth=0.0) ##9E289E
     
     ax2.grid(True)
     ax2.spines["top"].set_visible(False)
@@ -628,7 +637,10 @@ def comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_
     plt.subplots_adjust(hspace=0.0)
     
     #label text box
-    runoff_label='Ens medians'
+    if thinning == False:
+        runoff_label='Ens medians'
+    else:
+        runoff_label='Thinned ens members'
     ax2.text(0.015, 0.965, runoff_label, transform=ax2.transAxes, fontsize=13,
             verticalalignment='top', bbox=dict(boxstyle='round', facecolor='#32AAB5', alpha=0.3))
     
@@ -650,13 +662,19 @@ def comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_
     
     runoff_IQR = mpatches.Patch(color='#32AAB5',alpha=0.3, label='Runoff IQR')
     runoff_spread = mpatches.Patch(color='#32AAB5',alpha=0.5, label='Runoff spread')
-    uncovered_runoff_spread = mpatches.Patch(facecolor='#3f3f3f',alpha=0.2, hatch='///', edgecolor='#32AAB5', label='Runoff spread uncovered by meteo medians')
+    uncovered_runoff_spread = mpatches.Patch(facecolor=uncover_facecol,alpha=alpha, hatch='///', edgecolor='#32AAB5', label='Runoff spread uncovered by meteo medians')
                                    
     prec_IQR = mpatches.Patch(color='#023FA5',alpha=0.3, label='Prec IQR')
     prec_spread = mpatches.Patch(color='#023FA5',alpha=0.5, label='Prec spread')
     
     empty = ax1.plot(prec_obs_subset.date, prec_obs_subset['P-kor'], linewidth=0)
-                                         
+    
+    if thinning == False:
+        covering_label = '   Spread not covered \n    by meteo medians'
+    else:
+        covering_label = '   Spread not covered \n       by thinned fcst'
+
+                                  
     legend = fig.legend(title='$\\bf Precipitation $                     $\\bf Runoff$', handles=[l2[0], l1[0], prec_IQR, prec_spread, empty[0], 
                                                                                                     l4[0], l3[0], runoff_IQR, runoff_spread, uncovered_runoff_spread], 
         ncol=2, framealpha=0.5, loc=(0.644,0.526), 
@@ -664,7 +682,7 @@ def comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_
                 '         Median $q_{50\%}$', 
                 '                IQR', 
                 '         Total spread',
-                '   Spread not covered \n    by meteo medians', '',
+                f'{covering_label}', '',
                  '', '', '', '', '\n', '']);
     
     plt.rcParams.update({'font.size': 12})
@@ -684,12 +702,12 @@ def comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_
     nonNaNs_runoff = np.where(np.isnan(raw_spread_ratio_runoff)== False)[0]
     spread_ratio_runoff = raw_spread_ratio_runoff[nonNaNs_runoff]/len(nonNaNs_runoff)
     perc_spread_runoff = sum(spread_ratio_runoff)
-    uncov_prec_spread = 1.0 - perc_spread_runoff
+    uncov_runoff_spread = 1.0 - perc_spread_runoff
 
-    fig.text(0.93,0.865,f'{uncov_prec_spread*100:.1f}%',  transform=ax2.transAxes, fontsize=13,
+    fig.text(0.917,0.865,f'{uncov_runoff_spread*100:.1f}%',  transform=ax2.transAxes, fontsize=13,
             verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0), zorder=10)
         
-    return plt.show()
+    return uncov_runoff_spread, plt.show()
 
 
 
@@ -815,7 +833,8 @@ def past_hydro_unc_ensemble_df(df, sim_start, Verzasca_area, variable_type):
         
     #5 days before the simulation start:
     index_sim_start = int(df[sim_start]['rm00_pin01']['date'].loc[df[sim_start]['rm00_pin01']['date'] == sim_start].index.values)
-    sim_start_minus5days = str(df[sim_start]['rm00_pin01']['date'].loc[df[sim_start]['rm00_pin01']['date'].index == index_sim_start-120])[6:25]
+    #sim_start_minus5days = str(df[sim_start]['rm00_pin01']['date'].loc[df[sim_start]['rm00_pin01']['date'].index == index_sim_start])-120])[6:25]
+    sim_start_minus5days = '2018-11-03 00:00:00'
     
     #for cycle on different members/paramsets (pick just the first 25 because all the other are the same, meteo doesnt change)
     for member in list(df[sim_start].keys())[0:25]:
@@ -921,7 +940,7 @@ def hydro_unc_boxplot(quant_rm_groups_runoff, sim_start, normalized=False):
                 spread_range = (quant_rm_groups_runoff[rm]['1.0'][i] - quant_rm_groups_runoff[rm]['0.0'][i])
                 IQR_range = (quant_rm_groups_runoff[rm]['0.75'][i] - quant_rm_groups_runoff[rm]['0.25'][i])
                 
-            #series of if conditions to address in which range we are, look at the median, GOOD APPROACH???
+            #series of if conditions to address in which range we are, look at the median
             if (quant_rm_groups_runoff[rm]['0.5'][i] < runoff_ranges_values[0]):
                 hydro_unc[rm][runoff_ranges_names[0]][j+1] = spread_range
                 hydro_unc[rm][runoff_ranges_names[0]][j] = IQR_range
