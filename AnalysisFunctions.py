@@ -584,7 +584,7 @@ def comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_
     for date in quant_rm_medians.date:
         date_conv[i] = parser.parse(str(date))
         i = i+1
-     
+    """ 
     fig, (ax1, ax2) = plt.subplots(2, 2, figsize=(13,8), dpi=100)
        
     ax1 = plt.subplot2grid((6,1), (0,0), rowspan=2, colspan=1)
@@ -686,28 +686,30 @@ def comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_
                  '', '', '', '', '\n', '']);
     
     plt.rcParams.update({'font.size': 12})
-    
+    """
     #look at the percentage of spread covered by ens medians forecasts: calculate the spread ranges, do their ratio, divide by 120 (the amount of
     #leadtime hours) and sum over all the hours. If present, remove NaNs values and divide not by 120 but by the length of non-NaNs values
     
-    #set a threshold on the obs to avoid low flow conditions: obs > 10 m3s-1
+    #set a threshold on the obs to avoid low flow conditions: obs > 17.4 m3s-1
    
     rm_medians_spread_runoff = quant_rm_medians['1.0'] - quant_rm_medians['0.0']
-    rm_medians_spread_runoff = rm_medians_spread_runoff.loc[obs_subset.runoff.reset_index(drop=True) > 10].reset_index(drop=True)
+    rm_medians_spread_runoff = rm_medians_spread_runoff.loc[obs_subset.runoff.reset_index(drop=True) > 17.4].reset_index(drop=True)
     
     total_spread_runoff = quant_runoff ['1.0'] - quant_runoff['0.0']
-    total_spread_runoff = total_spread_runoff.loc[obs_subset.runoff.reset_index(drop=True) > 10].reset_index(drop=True)
+    total_spread_runoff = total_spread_runoff.loc[obs_subset.runoff.reset_index(drop=True) > 17.4].reset_index(drop=True)
     
     raw_spread_ratio_runoff = rm_medians_spread_runoff/total_spread_runoff
     nonNaNs_runoff = np.where(np.isnan(raw_spread_ratio_runoff)== False)[0]
     spread_ratio_runoff = raw_spread_ratio_runoff[nonNaNs_runoff]/len(nonNaNs_runoff)
     perc_spread_runoff = sum(spread_ratio_runoff)
     uncov_runoff_spread = 1.0 - perc_spread_runoff
-
+    """
     fig.text(0.917,0.865,f'{uncov_runoff_spread*100:.1f}%',  transform=ax2.transAxes, fontsize=13,
             verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0), zorder=10)
-        
-    return uncov_runoff_spread, plt.show()
+    """
+    plt.ioff()
+    
+    return uncov_runoff_spread#, plt.show()
 
 
 

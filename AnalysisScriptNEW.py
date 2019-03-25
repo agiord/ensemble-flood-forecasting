@@ -141,7 +141,6 @@ af.spaghetti_plot(rm_medians, ens_df_prec, obs_subset, prec_obs_subset, sim_star
 
 # Quantify the meteorological uncertainty by plotting the range of spread among all the 21 rm medians obtained:
 #af.hydrograph(quant_rm_medians, quant_prec, obs_subset, prec_obs_subset, sim_start, medians=True)
-import AnalysisFunctions as af
 af.comparison_meteo_hydrograph(quant_rm_medians, quant_runoff, quant_prec, obs_subset, prec_obs_subset, sim_start)[1]
 plt.savefig('/home/ciccuz/Thesis/AAAAAAAAAAAAAAAAAAAA.pdf', bbox_inches='tight')
 
